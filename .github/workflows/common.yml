@@ -159,6 +159,8 @@ jobs:
       - name: Upload Kodo
         if: github.event.inputs.uploadType == 'QiniuKodo'
         uses: modstart/github-kodo-action@master
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
         with:
           title: ${{ github.event.head_commit.message }}
           accessKey: ${{ secrets.KODO_ACCESS_KEY }}
@@ -173,6 +175,8 @@ jobs:
       - name: Upload Oss
         if: github.event.inputs.uploadType == 'AliyunOss'
         uses: modstart/github-oss-action@master
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
         with:
           title: ${{ github.event.head_commit.message }}
           key-id: ${{ secrets.OSS_2_KEY_ID }}
