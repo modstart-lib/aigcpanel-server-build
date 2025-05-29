@@ -58,21 +58,23 @@ jobs:
         env:
           GIT_USER: ${{ secrets.GIT_USER }}
           GIT_PASS: ${{ secrets.GIT_PASS }}
-          GIT_REPO: ${{ secrets.GIT_REPO_BASE }}
+          GIT_REPO_BASE: ${{ secrets.GIT_REPO_BASE }}
+          GIT_HOST: ${{ secrets.GIT_HOST }}
           COMMON_NAME: ${{ github.event.inputs.name }}
         run: |
-          git clone "https://${GIT_USER}:${GIT_PASS}@codeup.aliyun.com/${GIT_REPO}-${COMMON_NAME}.git" code
+          git clone "https://${GIT_USER}:${GIT_PASS}@${GIT_HOST}/${GIT_REPO_BASE}/aigcpanel-server-${COMMON_NAME}.git" code
 
       - name: Git clone repo
         if: runner.os == 'Windows'
         env:
           GIT_USER: ${{ secrets.GIT_USER }}
           GIT_PASS: ${{ secrets.GIT_PASS }}
-          GIT_REPO: ${{ secrets.GIT_REPO_BASE }}
+          GIT_REPO_BASE: ${{ secrets.GIT_REPO_BASE }}
+          GIT_HOST: ${{ secrets.GIT_HOST }}
           COMMON_NAME: ${{ github.event.inputs.name }}
         shell: pwsh
         run: |
-          git clone "https://${env:GIT_USER}:${env:GIT_PASS}@codeup.aliyun.com/${env:GIT_REPO}-${env:COMMON_NAME}.git" code
+          git clone "https://${env:GIT_USER}:${env:GIT_PASS}@${env:GIT_HOST}/${env:GIT_REPO_BASE}/aigcpanel-server-${env:COMMON_NAME}.git" code
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v3
@@ -173,11 +175,11 @@ jobs:
         uses: modstart/github-oss-action@master
         with:
           title: ${{ github.event.head_commit.message }}
-          key-id: ${{ secrets.OSS_KEY_ID }}
-          key-secret: ${{ secrets.OSS_KEY_SECRET }}
-          region: ${{ secrets.OSS_REGION }}
-          bucket: ${{ secrets.OSS_BUCKET }}
-          callback: ${{ secrets.OSS_CALLBACK }}
+          key-id: ${{ secrets.OSS_2_KEY_ID }}
+          key-secret: ${{ secrets.OSS_2_KEY_SECRET }}
+          region: ${{ secrets.OSS_2_REGION }}
+          bucket: ${{ secrets.OSS_2_BUCKET }}
+          callback: ${{ secrets.OSS_2_CALLBACK }}
           assets: |
             code/*.zip:models/aigcpanel-server-${{ env.COMMON_NAME }}-${{ env.DIST_FILE_NAME }}/
 
