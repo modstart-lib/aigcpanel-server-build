@@ -49,8 +49,8 @@ jobs:
       - name: RunInfo
         run: |
           echo "Arch: ${{ runner.os }} - ${{ runner.arch }}"
-          echo "Name: ${{ runner.arch }}"
-          echo "UploadType: ${{ runner.uploadType }}"
+          echo "Name: ${{ github.event.inputs.name }}"
+          echo "UploadType: ${{ github.event.inputs.uploadType }}"
 
       - name: Checkout Code
         uses: actions/checkout@v4
