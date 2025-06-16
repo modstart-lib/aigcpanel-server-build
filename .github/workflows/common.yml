@@ -45,13 +45,15 @@ jobs:
             arch: ${{ github.event.inputs.arch }}
 
     steps:
+
+      - name: RunInfo
+        run: |
+          echo "Arch: ${{ runner.os }} - ${{ runner.arch }}"
+          echo "Name: ${{ runner.arch }}"
+          echo "UploadType: ${{ runner.uploadType }}"
+
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Output OS and Arch
-        run: |
-          echo "OS: ${{ runner.os }}"
-          echo "ARCH: ${{ runner.arch }}"
 
       - name: Git clone repo
         if: runner.os == 'Linux' || runner.os == 'macOS'
