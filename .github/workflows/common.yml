@@ -56,6 +56,8 @@ on:
 
 jobs:
   build:
+    name: Build ${{ github.event.inputs.name }} - ${{ github.event.inputs.os }} - ${{ github.event.inputs.arch }}
+
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
