@@ -54,7 +54,7 @@ on:
           - QiniuKodo
           - AliyunOss
 
-run-name: Build ${{ github.event.inputs.name }} - ${{ github.event.inputs.os }} - ${{ github.event.inputs.arch }}
+run-name: ${{ github.event.inputs.name }}|${{ github.event.inputs.os }}|${{ github.event.inputs.arch }}
 
 jobs:
 
