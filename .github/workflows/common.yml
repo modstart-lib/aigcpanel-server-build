@@ -3,10 +3,28 @@ name: common
 on:
   workflow_dispatch:
     inputs:
+      title:
+        description: 'Title'
+        required: true
+        type: string
+        default: '变更说明'
       name:
         description: 'Name'
         required: true
-        type: string
+        type: choice
+        options:
+          - cosyvoice
+          - cosyvoice-pro
+          - cosyvoice2-0.5b
+          - cosyvoice2-300m-instruct
+          - sparktts
+          - fishspeech
+          - gpt-sovits
+          - indextts
+          - musetalk
+          - wav2lip
+          - live-indextts
+          - live
       os:
         description: 'OS'
         required: true
@@ -180,7 +198,7 @@ jobs:
         env:
           COMMON_NAME: ${{ github.event.inputs.name }}
         with:
-          title: ${{ github.event.head_commit.message }}
+          title: ${{ github.event.inputs.title }}
           key-id: ${{ secrets.OSS_2_KEY_ID }}
           key-secret: ${{ secrets.OSS_2_KEY_SECRET }}
           region: ${{ secrets.OSS_2_REGION }}
