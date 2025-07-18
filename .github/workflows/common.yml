@@ -16,7 +16,9 @@ on:
           - cosyvoice
           - cosyvoice-pro
           - cosyvoice2-0.5b
+          - cosyvoice2-0.5b-pro
           - cosyvoice2-300m-instruct
+          - cosyvoice2-300m-instruct-pro
           - sparktts
           - fishspeech
           - gpt-sovits
