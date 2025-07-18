@@ -54,10 +54,11 @@ on:
           - QiniuKodo
           - AliyunOss
 
-jobs:
-  build:
-    name: Build ${{ github.event.inputs.name }} - ${{ github.event.inputs.os }} - ${{ github.event.inputs.arch }}
+run-name: Build ${{ github.event.inputs.name }} - ${{ github.event.inputs.os }} - ${{ github.event.inputs.arch }}
 
+jobs:
+
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
