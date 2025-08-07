@@ -27,6 +27,7 @@ on:
           - wav2lip
           - live-indextts
           - live
+          - funasr
       os:
         description: 'OS'
         required: true
