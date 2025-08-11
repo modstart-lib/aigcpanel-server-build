@@ -90,7 +90,7 @@ jobs:
         run: |
           git clone "https://${env:GIT_USER}:${env:GIT_PASS}@${env:GIT_HOST}/${env:GIT_REPO_BASE}/${env:COMMON_NAME}-pro.git" code
 
-            - name: Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
