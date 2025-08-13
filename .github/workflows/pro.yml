@@ -95,6 +95,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Build Prepare (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install libxtst-dev libpng++-dev
+
       - name: Build Prepare (macOS)
         if: runner.os == 'macOS'
         run: |
