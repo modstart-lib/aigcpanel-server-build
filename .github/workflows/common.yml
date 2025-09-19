@@ -1,0 +1,230 @@
+name: common
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Title'
+        required: true
+        type: string
+        default: '变更说明'
+      name:
+        description: 'Name'
+        required: true
+        type: choice
+        options:
+          - cosyvoice
+          - cosyvoice-pro
+          - cosyvoice2-0.5b
+          - cosyvoice2-0.5b-pro
+          - cosyvoice2-300m-instruct
+          - cosyvoice2-300m-instruct-pro
+          - sparktts
+          - fishspeech
+          - gpt-sovits
+          - indextts
+          - indextts2
+          - musetalk
+          - wav2lip
+          - live-indextts
+          - live
+          - funasr
+      os:
+        description: 'OS'
+        required: true
+        type: choice
+        default: windows-latest
+        options:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+          - windows-server
+      arch:
+        description: 'Arch'
+        required: true
+        type: choice
+        default: amd64
+        options:
+          - amd64
+          - arm64
+      uploadType:
+        description: 'Upload Type'
+        required: true
+        type: choice
+        default: AliyunOss
+        options:
+          - None
+          - QiniuKodo
+          - AliyunOss
+
+run-name: ${{ github.event.inputs.name }}|${{ github.event.inputs.os }}|${{ github.event.inputs.arch }}
+
+jobs:
+
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ${{ github.event.inputs.os }}
+            arch: ${{ github.event.inputs.arch }}
+            runner: ${{ github.event.inputs.os == 'windows-server' && fromJson('["self-hosted", "Windows", "X64"]') || github.event.inputs.os }}
+
+    steps:
+
+      - name: RunInfo
+        run: |
+          echo "Arch: ${{ runner.os }} - ${{ runner.arch }}"
+          echo "Name: ${{ github.event.inputs.name }}"
+          echo "UploadType: ${{ github.event.inputs.uploadType }}"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Git clone repo
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        env:
+          GIT_USER: ${{ secrets.GIT_USER }}
+          GIT_PASS: ${{ secrets.GIT_PASS }}
+          GIT_REPO_BASE: ${{ secrets.GIT_REPO_BASE }}
+          GIT_HOST: ${{ secrets.GIT_HOST }}
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        run: |
+          git clone "https://${GIT_USER}:${GIT_PASS}@${GIT_HOST}/${GIT_REPO_BASE}/aigcpanel-server-${COMMON_NAME}.git" code
+
+      - name: Git clone repo
+        if: runner.os == 'Windows'
+        env:
+          GIT_USER: ${{ secrets.GIT_USER }}
+          GIT_PASS: ${{ secrets.GIT_PASS }}
+          GIT_REPO_BASE: ${{ secrets.GIT_REPO_BASE }}
+          GIT_HOST: ${{ secrets.GIT_HOST }}
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        shell: pwsh
+        run: |
+          git clone "https://${env:GIT_USER}:${env:GIT_PASS}@${env:GIT_HOST}/${env:GIT_REPO_BASE}/aigcpanel-server-${env:COMMON_NAME}.git" code
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        if: github.event.inputs.os != 'windows-server'
+        with:
+          miniconda-version: "latest"
+          activate-environment: "test"
+          python-version: 3.8
+          auto-activate-base: false
+
+      - name: Cert Prepare (macOS)
+        if: runner.os == 'macOS'
+        working-directory: code
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.CORP_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.CORP_MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "find-identity"
+          security find-identity -p codesigning
+          echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security unlock-keychain -p "" build.keychain
+          echo "find-identity"
+          security find-identity -v -p codesigning build.keychain
+          echo "find-identity"
+          security find-identity -p codesigning
+          echo "set-key-partition-list"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" -l "Mac Developer ID Application: Xi'an Yanyi Information Technology Co., Ltd" -t private build.keychain
+          echo "export"
+          security export -k build.keychain -t certs -f x509 -p -o certificate.cer
+          echo "add-trusted-cert"
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certificate.cer
+          echo "find-identity"
+          security find-identity -p codesigning
+          rm -rfv certificate.cer certificate.p12
+
+      - name: Build
+        if: runner.os == 'macOS'
+        working-directory: code
+        run: |
+          ./_aigcpanel/build-osx.sh
+
+      - name: Build
+        if: runner.os == 'Linux'
+        working-directory: code
+        run: |
+          ./_aigcpanel/build-linux.sh
+
+      - name: Build
+        if: runner.os == 'Windows'
+        working-directory: code
+        shell: powershell
+        run: |
+          ./_aigcpanel/build-win.ps1
+
+      - name: Set Build Name ( Linux / macOS )
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        working-directory: code
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        run: |
+          DIST_FILE_NAME=${{ runner.os }}-${{ runner.arch }}-v$(date +%Y%m%d_%H%M%S)-${RANDOM}
+          echo ::add-mask::$DIST_FILE_NAME
+          echo DIST_FILE_NAME=$DIST_FILE_NAME >> $GITHUB_ENV
+          echo COMMON_NAME=$COMMON_NAME >> $GITHUB_ENV
+
+      - name: Set Build Name ( Windows )
+        if: runner.os == 'Windows'
+        working-directory: code
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        shell: pwsh
+        run: |
+          $randomNumber = Get-Random -Minimum 10000 -Maximum 99999
+          $DIST_FILE_NAME = "Windows-X64-v$(Get-Date -Format 'yyyyMMdd_HHmmss')-$randomNumber"
+          Write-Host "::add-mask::$DIST_FILE_NAME"
+          echo "DIST_FILE_NAME=$DIST_FILE_NAME" >> $env:GITHUB_ENV
+          echo "COMMON_NAME=$COMMON_NAME" >> $env:GITHUB_ENV
+
+      - name: Upload Kodo
+        if: github.event.inputs.uploadType == 'QiniuKodo' && github.event.inputs.os != 'windows-server'
+        uses: modstart/github-kodo-action@master
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        with:
+          title: ${{ github.event.head_commit.message }}
+          accessKey: ${{ secrets.KODO_ACCESS_KEY }}
+          secretKey: ${{ secrets.KODO_SECRET_KEY }}
+          bucket: ${{ secrets.KODO_BUCKET }}
+          domain: ${{ secrets.KODO_DOMAIN }}
+          zone: ${{ secrets.KODO_ZONE }}
+          callback: ${{ secrets.OSS_CALLBACK }}
+          assets: |
+            code/*.zip:models/aigcpanel-server-${{ env.COMMON_NAME }}-${{ env.DIST_FILE_NAME }}/
+
+      - name: Upload Oss
+        if: github.event.inputs.uploadType == 'AliyunOss' && github.event.inputs.os != 'windows-server'
+        uses: modstart/github-oss-action@master
+        env:
+          COMMON_NAME: ${{ github.event.inputs.name }}
+        with:
+          title: ${{ github.event.inputs.title }}
+          key-id: ${{ secrets.OSS_2_KEY_ID }}
+          key-secret: ${{ secrets.OSS_2_KEY_SECRET }}
+          region: ${{ secrets.OSS_2_REGION }}
+          bucket: ${{ secrets.OSS_2_BUCKET }}
+          callbackUrlSign: ${{ secrets.OSS_2_CALLBACK_URL_SIGN }}
+          callback: ${{ secrets.OSS_2_CALLBACK }}
+          assets: |
+            code/*.zip:models/aigcpanel-server-${{ env.COMMON_NAME }}-${{ env.DIST_FILE_NAME }}/
+
+      - name: Move ZIP files to output directory
+        if: github.event.inputs.os == 'windows-server'
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "D:\actions-runner-output"
+          $zipFiles = Get-ChildItem -Path "code\*.zip"
+          foreach ($file in $zipFiles) {
+              $newName = $file.BaseName + "-${env:COMMON_NAME}-${env:DIST_FILE_NAME}" + $file.Extension
+              Move-Item -Path $file.FullName -Destination "D:\actions-runner-output\$newName"
+          }

@@ -1,0 +1,70 @@
+name: cleanup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACTION_DELETE_TOKEN }}
+        run: |
+          cutoff=$(date -u -d '1 day ago' +%s)
+          
+          # List all repositories for the user
+          echo "Listing all repositories..."
+          repos_page=1
+          while true; do
+            repos=$(curl -s -H "Accept: application/vnd.github+json" \
+                         -H "Authorization: Bearer $GITHUB_TOKEN" \
+                         "https://api.github.com/user/repos?per_page=100&page=$repos_page&type=all")
+            
+            repos_count=$(echo "$repos" | jq '. | length')
+            if [ "$repos_count" -eq 0 ]; then
+              echo "No more repositories"
+              break
+            fi
+            
+            for repo_row in $(echo "$repos" | jq -r '.[] | @base64'); do
+              _jq_repo() { echo ${repo_row} | base64 --decode | jq -r ${1}; }
+              repo_full_name=$(_jq_repo '.full_name')
+              echo "Processing repository: $repo_full_name"
+              
+              # Now delete old workflow runs for this repo
+              page=1
+              while true; do
+                runs=$(curl -s -H "Accept: application/vnd.github+json" \
+                             -H "Authorization: Bearer $GITHUB_TOKEN" \
+                             "https://api.github.com/repos/$repo_full_name/actions/runs?per_page=100&page=$page")
+                
+                count=$(echo "$runs" | jq '.workflow_runs | length')
+                if [ "$count" -eq 0 ]; then
+                  echo "No more runs for $repo_full_name"
+                  break
+                fi
+                for row in $(echo "$runs" | jq -r '.workflow_runs[] | @base64'); do
+                  _jq() { echo ${row} | base64 --decode | jq -r ${1}; }
+                  run_id=$(_jq '.id')
+                  created_at=$(_jq '.created_at')
+                  run_ts=$(date -u -d "$created_at" +%s)
+                  if [ "$run_ts" -lt "$cutoff" ]; then
+                    echo "Deleting run $run_id in $repo_full_name created at $created_at"
+                    curl -s -X DELETE \
+                      -H "Accept: application/vnd.github+json" \
+                      -H "Authorization: Bearer $GITHUB_TOKEN" \
+                      "https://api.github.com/repos/$repo_full_name/actions/runs/$run_id"
+                  fi
+                done
+                page=$((page+1))
+              done
+            done
+            repos_page=$((repos_page+1))
+          done
