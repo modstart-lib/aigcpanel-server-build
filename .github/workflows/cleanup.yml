@@ -53,10 +53,10 @@ jobs:
                 for row in $(echo "$runs" | jq -r '.workflow_runs[] | @base64'); do
                   _jq() { echo ${row} | base64 --decode | jq -r ${1}; }
                   run_id=$(_jq '.id')
-                  created_at=$(_jq '.created_at')
-                  run_ts=$(date -u -d "$created_at" +%s)
+                  updated_at=$(_jq '.updated_at')
+                  run_ts=$(date -u -d "$updated_at" +%s)
                   if [ "$run_ts" -lt "$cutoff" ]; then
-                    echo "Deleting run $run_id in $repo_full_name created at $created_at"
+                    echo "Deleting run $run_id in $repo_full_name updated at $updated_at"
                     curl -s -X DELETE \
                       -H "Accept: application/vnd.github+json" \
                       -H "Authorization: Bearer $GITHUB_TOKEN" \
