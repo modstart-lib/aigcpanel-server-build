@@ -1,4 +1,4 @@
-name: common
+name: server
 
 on:
   workflow_dispatch:
