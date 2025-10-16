@@ -26,6 +26,7 @@ on:
           - indextts2
           - musetalk
           - wav2lip
+          - wav2lip-384
           - live-indextts
           - live
           - funasr
