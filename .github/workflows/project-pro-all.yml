@@ -1,4 +1,4 @@
-name: pro
+name: project-pro-all
 
 on:
   workflow_dispatch:
