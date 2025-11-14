@@ -35,15 +35,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-      matrix:
           include:
             - os: ubuntu-latest
-              arch: [arm64, amd64]
+              arch: [amd64]
             - os: macos-latest
-              arch: [arm64, amd64]
+              arch: [arm64]
             - os: windows-latest
-              arch: [arm64, amd64]
+              arch: [amd64]
 
     steps:
 
